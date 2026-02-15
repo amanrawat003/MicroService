@@ -52,7 +52,7 @@ namespace ProductService.Consumer
             // Durable exchange
             channel.ExchangeDeclare(
                 exchange: "order-exchange",
-                type: ExchangeType.Fanout,
+                type: ExchangeType.Topic,
                 durable: true);
 
             // Durable named queue
@@ -66,7 +66,7 @@ namespace ProductService.Consumer
             channel.QueueBind(
                 queue: "product-order-created-queue",
                 exchange: "order-exchange",
-                routingKey: "");
+                routingKey: "order.created");
 
             var consumer = new EventingBasicConsumer(channel);
 
@@ -86,6 +86,11 @@ namespace ProductService.Consumer
                 if (product == null)
                 {
                     Console.WriteLine("Product not found.");
+                    //channel.BasicAck(e.DeliveryTag, false);
+                    //return;
+
+                    PublishOrderFailed(channel, orderEvent.OrderId, "Product not found");
+
                     channel.BasicAck(e.DeliveryTag, false);
                     return;
                 }
@@ -93,6 +98,11 @@ namespace ProductService.Consumer
                 if (product.Stock < orderEvent.Quantity)
                 {
                     Console.WriteLine("Insufficient stock.");
+                    //channel.BasicAck(e.DeliveryTag, false);
+                    //return;
+
+                    PublishOrderFailed(channel, orderEvent.OrderId, "Insufficient stock");
+
                     channel.BasicAck(e.DeliveryTag, false);
                     return;
                 }
@@ -101,6 +111,7 @@ namespace ProductService.Consumer
                 await db.SaveChangesAsync();
 
                 Console.WriteLine("Stock updated successfully.");
+                PublishStockReduced(channel, orderEvent.OrderId);
 
                 channel.BasicAck(e.DeliveryTag, false);
             };
@@ -113,7 +124,46 @@ namespace ProductService.Consumer
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
+        private void PublishStockReduced(IModel channel, int orderId)
+        {
+            var stockReducedEvent = new StockReducedEvent
+            {
+                OrderId = orderId
+            };
+
+            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(stockReducedEvent));
+
+            channel.BasicPublish(
+                exchange: "order-exchange",
+                routingKey: "order.stockreduced",
+                basicProperties: null,
+                body: body);
+
+            Console.WriteLine($"Published StockReduced for Order {orderId}");
+        }
+
+        private void PublishOrderFailed(IModel channel, int orderId, string reason)
+        {
+            var failedEvent = new OrderFailedEvent
+            {
+                OrderId = orderId,
+                Reason = reason
+            };
+
+            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(failedEvent));
+
+            channel.BasicPublish(
+                exchange: "order-exchange",
+                routingKey: "order.failed",
+                basicProperties: null,
+                body: body);
+
+            Console.WriteLine($"Published OrderFailed for Order {orderId}");
+        }
+
+
 
     }
+
 
 }

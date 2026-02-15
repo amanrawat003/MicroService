@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderService.Consumer.OrderService.Consumer;
 using OrderService.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +25,9 @@ builder.Services.AddHttpClient("ProductService", client =>
             : "http://productservice:8080"
     );
 });
+
+builder.Services.AddHostedService<StockReducedConsumer>();
+builder.Services.AddHostedService<OrderFailedConsumer>();
 
 var app = builder.Build();
 

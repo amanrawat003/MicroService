@@ -37,7 +37,7 @@ public class OrderCreatedConsumer : BackgroundService
         // Durable exchange (MUST MATCH other services)
         channel.ExchangeDeclare(
             exchange: "order-exchange",
-            type: ExchangeType.Fanout,
+            type: ExchangeType.Topic,
             durable: true);
 
         // Durable queue for notifications
@@ -51,7 +51,7 @@ public class OrderCreatedConsumer : BackgroundService
         channel.QueueBind(
             queue: "notification-order-created-queue",
             exchange: "order-exchange",
-            routingKey: "");
+            routingKey: "order.*");
 
         var consumer = new EventingBasicConsumer(channel);
 

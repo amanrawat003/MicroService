@@ -20,14 +20,14 @@ namespace OrderService.Messaging
             // Durable exchange (IMPORTANT)
             channel.ExchangeDeclare(
                 exchange: "order-exchange",
-                type: ExchangeType.Fanout,
+                type: ExchangeType.Topic,
                 durable: true);
 
             var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(evt));
 
             channel.BasicPublish(
                 exchange: "order-exchange",
-                routingKey: "",
+                routingKey: "order.created",
                 basicProperties: null,
                 body: body
             );

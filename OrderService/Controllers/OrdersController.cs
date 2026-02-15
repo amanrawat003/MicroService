@@ -36,21 +36,47 @@ namespace OrderService.Controllers
         //    return Ok(order);
         //}
 
+        //[HttpPost]
+        //public async Task<IActionResult> Create(Order order)
+        //{
+        //    var client = _httpClientFactory.CreateClient("ProductService");
+
+        //    var product = await client
+        //        .GetFromJsonAsync<ProductDto>($"/api/products/{order.ProductId}");
+
+        //    if (product == null)
+        //        return BadRequest("Invalid product");
+
+        //    if (product.Stock < order.Quantity)
+        //        return BadRequest("Insufficient stock");
+
+        //    order.TotalAmount = product.Price * order.Quantity;
+
+        //    _context.Orders.Add(order);
+        //    await _context.SaveChangesAsync();
+
+        //    var publisher = new OrderEventPublisher();
+
+        //    publisher.PublishOrderCreated(new OrderCreatedEvent
+        //    {
+        //        OrderId = order.Id,
+        //        ProductId = product.Id,
+        //        Quantity = order.Quantity
+        //    });
+
+        //    return Ok(order);
+        //}
+
         [HttpPost]
-        public async Task<IActionResult> Create(Order order)
+        public async Task<IActionResult> Create(CreateOrderRequest request)
         {
-            var client = _httpClientFactory.CreateClient("ProductService");
-
-            var product = await client
-                .GetFromJsonAsync<ProductDto>($"/api/products/{order.ProductId}");
-
-            if (product == null)
-                return BadRequest("Invalid product");
-
-            if (product.Stock < order.Quantity)
-                return BadRequest("Insufficient stock");
-
-            order.TotalAmount = product.Price * order.Quantity;
+            var order = new Order
+            {
+                ProductId = request.ProductId,
+                Quantity = request.Quantity,
+                Status = OrderStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
@@ -60,12 +86,13 @@ namespace OrderService.Controllers
             publisher.PublishOrderCreated(new OrderCreatedEvent
             {
                 OrderId = order.Id,
-                ProductId = product.Id,
+                ProductId = order.ProductId,
                 Quantity = order.Quantity
             });
 
             return Ok(order);
         }
+
 
     }
 }
