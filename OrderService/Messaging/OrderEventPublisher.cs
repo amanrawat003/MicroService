@@ -17,7 +17,11 @@ namespace OrderService.Messaging
             using var connection = factory.CreateConnection();
             using var channel = connection.CreateModel();
 
-            channel.ExchangeDeclare("order-exchange", ExchangeType.Fanout);
+            // Durable exchange (IMPORTANT)
+            channel.ExchangeDeclare(
+                exchange: "order-exchange",
+                type: ExchangeType.Fanout,
+                durable: true);
 
             var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(evt));
 
@@ -27,6 +31,8 @@ namespace OrderService.Messaging
                 basicProperties: null,
                 body: body
             );
+
+            Console.WriteLine("OrderCreated event published.");
         }
     }
 }

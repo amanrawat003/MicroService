@@ -14,14 +14,14 @@ public class OrderCreatedConsumer : BackgroundService
             HostName = "rabbitmq"
         };
 
-        // 🔁 Retry until RabbitMQ is ready
+        // Retry until RabbitMQ is ready
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 connection = factory.CreateConnection();
                 channel = connection.CreateModel();
-                Console.WriteLine("Connected to RabbitMQ.");
+                Console.WriteLine("Connected to RabbitMQ (NotificationService).");
                 break;
             }
             catch
@@ -34,10 +34,24 @@ public class OrderCreatedConsumer : BackgroundService
         if (channel == null)
             return;
 
-        channel.ExchangeDeclare("order-exchange", ExchangeType.Fanout);
-        var queue = channel.QueueDeclare().QueueName;
+        // Durable exchange (MUST MATCH other services)
+        channel.ExchangeDeclare(
+            exchange: "order-exchange",
+            type: ExchangeType.Fanout,
+            durable: true);
 
-        channel.QueueBind(queue, "order-exchange", "");
+        // Durable queue for notifications
+        channel.QueueDeclare(
+            queue: "notification-order-created-queue",
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null);
+
+        channel.QueueBind(
+            queue: "notification-order-created-queue",
+            exchange: "order-exchange",
+            routingKey: "");
 
         var consumer = new EventingBasicConsumer(channel);
 
@@ -45,12 +59,15 @@ public class OrderCreatedConsumer : BackgroundService
         {
             var message = Encoding.UTF8.GetString(e.Body.ToArray());
             Console.WriteLine($"[NotificationService] Order event received: {message}");
+
+            channel.BasicAck(e.DeliveryTag, false);
         };
 
-        channel.BasicConsume(queue, true, consumer);
+        channel.BasicConsume(
+            queue: "notification-order-created-queue",
+            autoAck: false,
+            consumer: consumer);
 
-        // 🔥 Keep the service alive
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
-
 }

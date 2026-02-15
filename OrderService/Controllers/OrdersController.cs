@@ -42,10 +42,13 @@ namespace OrderService.Controllers
             var client = _httpClientFactory.CreateClient("ProductService");
 
             var product = await client
-                .GetFromJsonAsync<ProductDto>($"/api/products/{order.ProductName}");
+                .GetFromJsonAsync<ProductDto>($"/api/products/{order.ProductId}");
 
             if (product == null)
                 return BadRequest("Invalid product");
+
+            if (product.Stock < order.Quantity)
+                return BadRequest("Insufficient stock");
 
             order.TotalAmount = product.Price * order.Quantity;
 
@@ -57,10 +60,10 @@ namespace OrderService.Controllers
             publisher.PublishOrderCreated(new OrderCreatedEvent
             {
                 OrderId = order.Id,
-                ProductName = order.ProductName,
-                Quantity = order.Quantity,
-                TotalAmount = order.TotalAmount
+                ProductId = product.Id,
+                Quantity = order.Quantity
             });
+
             return Ok(order);
         }
 

@@ -30,17 +30,30 @@ namespace ProductService.Controllers
             return Ok(product);
         }
 
-        [HttpGet("{name}")]
-        public async Task<IActionResult> GetByName(string name)
+        //[HttpGet("{name}")]
+        //public async Task<IActionResult> GetByName(string name)
+        //{
+        //    var product = await _context.Products
+        //        .FirstOrDefaultAsync(p => p.Name == name);
+
+        //    if (product == null)
+        //        return NotFound();
+
+        //    return Ok(product);
+        //}
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id)
         {
             var product = await _context.Products
-                .FirstOrDefaultAsync(p => p.Name == name);
+                .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
                 return NotFound();
 
             return Ok(product);
         }
+
 
     }
 }
